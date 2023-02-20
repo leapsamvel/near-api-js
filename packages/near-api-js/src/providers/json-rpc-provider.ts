@@ -30,6 +30,7 @@ import { baseEncode } from 'borsh';
 import exponentialBackoff from '../utils/exponential-backoff';
 import { parseRpcError, getErrorTypeFromErrorMessage } from '../utils/rpc_errors';
 import { SignedTransaction } from '../transaction';
+import { Fallback } from '@leapwallet/fallback-falooda/dist/browser/src';
 
 /** @hidden */
 export { TypedError, ErrorContext };
@@ -52,14 +53,22 @@ let _nextId = 123;
  */
 export class JsonRpcProvider extends Provider {
     /** @hidden */
-    readonly connection: ConnectionInfo;
+    readonly connection: [ConnectionInfo];
+    readonly falooda: Fallback.Falooda;
 
     /**
      * @param connectionInfo Connection info
      */
-    constructor(connectionInfo: ConnectionInfo) {
+    constructor(connectionInfo: [ConnectionInfo]) {
         super();
-        this.connection = connectionInfo || { url: '' };
+        this.connection = connectionInfo || [{ url: '' }];
+        this.falooda = new Fallback.Falooda({
+            intervalInSecs: 3,
+            urls: {
+                near: connectionInfo.map((c:ConnectionInfo) => c.url)
+            }
+        });
+        this.falooda.start();
     }
 
     /**
@@ -329,7 +338,8 @@ export class JsonRpcProvider extends Provider {
                     id: (_nextId++),
                     jsonrpc: '2.0'
                 };
-                const response = await fetchJson(this.connection, JSON.stringify(request));
+                const connectionUrl = this.falooda.getRandomNearUrl();
+                const response = await fetchJson(connectionUrl, JSON.stringify(request));
                 if (response.error) {
                     if (typeof response.error.data === 'object') {
                         if (typeof response.error.data.error_message === 'string' && typeof response.error.data.error_type === 'string') {
