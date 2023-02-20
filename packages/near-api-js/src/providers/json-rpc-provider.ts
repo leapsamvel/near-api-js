@@ -338,7 +338,7 @@ export class JsonRpcProvider extends Provider {
                     id: (_nextId++),
                     jsonrpc: '2.0'
                 };
-                const connectionUrl = this.falooda.getRandomNearUrl();
+                const connectionUrl = this.falooda.getFastestNearUrl();
                 const response = await fetchJson(connectionUrl, JSON.stringify(request));
                 if (response.error) {
                     if (typeof response.error.data === 'object') {
